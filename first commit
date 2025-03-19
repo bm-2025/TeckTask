@@ -1,0 +1,72 @@
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+
+//*
+1. Чтение PDF – парсит PDF и извлекает текст в виде словаря.	
+2. Проверка структуры – сравнивает новые файлы с эталоном.
+
+Код покрывает основные моменты: масштабируемость (можно легко добавить другие проверки), тестируемость (разделение логики), простота понимания.
+*//
+
+public class PdfProcessor {
+
+    // Метод для чтения информации из PDF и представления ее в виде словаря
+    public static Map<String, String> parsePdf(File file) throws IOException {
+        Map<String, String> extractedData = new HashMap<>();
+
+        try (PDDocument document = PDDocument.load(file)) {
+            PDFTextStripper pdfStripper = new PDFTextStripper();
+            String text = pdfStripper.getText(document);
+            
+            // Разбираем текст и кладем в мапу
+            for (String line : text.split("\n")) {
+                String[] parts = line.split(":", 2);
+                if (parts.length == 2) {
+                    extractedData.put(parts[0].trim(), parts[1].trim());
+                }
+            }
+        }
+        return extractedData;
+    }
+
+    // Метод для проверки соответствия нового PDF эталонному
+    public static boolean validatePdf(File testFile, Map<String, String> referenceData) throws IOException {
+        Map<String, String> testData = parsePdf(testFile);
+
+        for (String key : referenceData.keySet()) {
+            if (!testData.containsKey(key) || !testData.get(key).equals(referenceData.get(key))) {
+                System.out.println("Mismatch at: " + key);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static void main(String[] args) {
+        try {
+            File referenceFile = new File("test_task.pdf");
+            Map<String, String> referenceData = parsePdf(referenceFile);
+
+            File newFile = new File("new_test.pdf"); // Подставить реальный путь
+            boolean isValid = validatePdf(newFile, referenceData);
+
+            System.out.println("PDF соответствует эталону: " + isValid);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+//*
+Как это работает:
+1. Читаем PDF с помощью Apache PDFBox.
+2. Парсим текст, раскладывая его по ключ-значение.
+3. Проверяем соответствие нового файла эталону.
+4. В консоли увидим результат проверки.
+*//
